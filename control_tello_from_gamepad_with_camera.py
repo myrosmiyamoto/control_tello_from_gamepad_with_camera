@@ -8,17 +8,16 @@ import pygame
 from pygame.locals import JOYAXISMOTION, JOYBUTTONDOWN
 from functools import cache
 import cv2
-from threading import Thread
 from queue import Queue
-
+from threading import Thread
 
 class TelloCameraStream:
     def __init__(self, ip, port):
         self.ip = ip
         self.port = port
-        self.is_running = True  # ストリームが動作中かどうか
-        self.is_recording = False  # 録画中かどうか
-        self.is_take_picture = False  # 写真を撮るかどうか
+        self.is_running = True  # ストリームが動作中かのフラグ
+        self.is_recording = False  # 録画中かのフラグ
+        self.is_take_picture = False  # 写真を撮るかのフラグ
         # カメラストリームを取得
         self.cap = cv2.VideoCapture(f'udp://{ip}:{port}')
         # 画像の幅と高さを設定
@@ -33,7 +32,6 @@ class TelloCameraStream:
         self.thread = Thread(target=self._capture_frames, daemon=True)
         self.thread.start()
 
-
     def _capture_frames(self):
         while self.is_running:
             ret, frame = self.cap.read()
@@ -43,7 +41,6 @@ class TelloCameraStream:
                     # キューからフレームを取り出す
                     self.frame_queue.get_nowait()
                 self.frame_queue.put(frame)
-
 
     def display_stream(self):
         if self.is_running:
@@ -69,10 +66,8 @@ class TelloCameraStream:
                 if cv2.waitKey(1) & 0xFF == 27 or cv2.getWindowProperty(self.frame_name, cv2.WND_PROP_AUTOSIZE) == -1:
                     self.stop()
 
-
     def take_picture(self):
         self.is_take_picture = True  # 写真を撮るフラグを立てる
-
 
     def start_recording(self):
         now = time.strftime('%Y%m%d_%H%M%S')
@@ -88,7 +83,6 @@ class TelloCameraStream:
         self.is_recording = True
         print(f"[INFO] Recording started: {file_name}")
 
-
     def stop_recording(self):
         if self.is_recording and self.video_writer:
             self.video_writer.release()  # 録画を停止
@@ -96,7 +90,7 @@ class TelloCameraStream:
         self.is_recording = False
         print("[INFO] Recording stopped")
 
-
+    # ストリームを停止
     def stop(self):
         self.is_running = False  # ストリームを停止
         self.thread.join()  # スレッドを終了
@@ -109,7 +103,6 @@ class TelloCameraStream:
     # ストリームが動作中かどうかを返す
     def is_run(self):
         return self.is_running
-
 
 
 def main():
@@ -148,6 +141,7 @@ def main():
         try:
             # カメラストリームを表示
             camera_stream.display_stream()
+
             # イベントの取得
             for event in pygame.event.get():
                 # イベントがスティック操作の場合
@@ -186,6 +180,7 @@ def main():
                         camera_stream.stop()
                         term_process(tello)
 
+            # ストリームが停止している場合は、Telloを緊急停止
             if not camera_stream.is_run():
                 send_tello(tello, 'emergency')
                 term_process(tello)
@@ -195,19 +190,19 @@ def main():
             send_tello(tello, 'emergency')
             camera_stream.stop()
             term_process(tello)
+        # その他のエラーが発生した
         except Exception as e:
             print(f'[ERROR] Unexpected error: {e}')
             send_tello(tello, 'emergency')
             camera_stream.stop()
             term_process(tello)
 
-
+# 終了処理
 def term_process(tello):
     print('[Finish] Game finish!!')
     tello.streamoff()
     tello.end()
     sys.exit()
-
 
 # send_rc_control(left_right, forward_backward, up_down, yaw)
 # left_right                 left -100 ...  100 right
@@ -237,7 +232,6 @@ def send_tello(tello, cmd, left_right=0, forward_backward=0, up_down=0, yaw=0):
     except TelloException:
         print('[ERROR] Error occurred when sending tello command ')
 
-
 # スティックの出力数値を調整
 # -1.0 ~ 1.0 の数値を -100 ~ 100 の数値に変換
 # 線形補間を用いて計算している
@@ -253,7 +247,6 @@ def map_axis(val):
     out_max = 100
     # 線形補間を用いて計算
     return int(out_min + (out_max - out_min) * ((val - in_min) / (in_max - in_min)))
-
 
 if __name__ == '__main__':
     main()
