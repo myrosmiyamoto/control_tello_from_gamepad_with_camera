@@ -40,6 +40,7 @@ class TelloCameraStream:
             if ret:
                 # 最新フレームのみを保持
                 if not self.frame_queue.empty():
+                    # キューからフレームを取り出す
                     self.frame_queue.get_nowait()
                 self.frame_queue.put(frame)
 
@@ -191,6 +192,11 @@ def main():
         # Ctrl+Cが押された
         except KeyboardInterrupt:
             print('[Warnning] Press Ctrl+C to exit')
+            send_tello(tello, 'emergency')
+            camera_stream.stop()
+            term_process(tello)
+        except Exception as e:
+            print(f'[ERROR] Unexpected error: {e}')
             send_tello(tello, 'emergency')
             camera_stream.stop()
             term_process(tello)
